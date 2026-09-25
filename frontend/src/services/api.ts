@@ -8,21 +8,21 @@ const api = axios.create({
   },
 })
 
+// Use a fixed user ID for personal use
+const DEFAULT_USER_ID = 'personal-user'
+
+// Initialize user ID on first load
+if (!localStorage.getItem('userId')) {
+  localStorage.setItem('userId', DEFAULT_USER_ID)
+}
+
 api.interceptors.request.use((config) => {
-  const userId = localStorage.getItem('userId')
-  if (userId) {
-    config.headers['x-user-id'] = userId
-  }
+  const userId = localStorage.getItem('userId') || DEFAULT_USER_ID
+  config.headers['x-user-id'] = userId
   return config
 })
 
-export const authApi = {
-  register: (email: string, name?: string) =>
-    api.post<User>('/user/register', { email, name }),
-}
-
 export const userApi = {
-  getProfile: () => api.get<User>('/user/profile'),
   getPreferences: () => api.get<UserPreferences>('/user/preferences'),
   updatePreferences: (data: Partial<UserPreferences>) => api.put<UserPreferences>('/user/preferences', data),
   getStats: () => api.get<UserStats>('/user/stats'),

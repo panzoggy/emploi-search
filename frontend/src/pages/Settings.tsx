@@ -4,7 +4,6 @@ import { Button } from '../components/Button'
 import { Input } from '../components/Input'
 import { Card } from '../components/Card'
 import { userApi } from '../services/api'
-import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 import type { UserPreferences } from '../types'
 
@@ -17,7 +16,6 @@ const EXPERIENCE_LEVELS = [
 ]
 
 export function SettingsPage() {
-  const { user } = useAuth()
   const [preferences, setPreferences] = useState<UserPreferences | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -98,7 +96,7 @@ export function SettingsPage() {
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Paramètres</h1>
-          <p className="text-gray-500 mt-1">Gérez vos préférences de recherche et votre compte</p>
+          <p className="text-gray-500 mt-1">Gérez vos préférences de recherche</p>
         </div>
         
         <div className="space-y-6">
@@ -106,14 +104,8 @@ export function SettingsPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Profil</h2>
             <div className="space-y-4">
               <Input
-                label="Email"
-                value={user?.email || ''}
-                disabled
-                helperText="L'email ne peut pas être modifié"
-              />
-              <Input
-                label="Nom"
-                value={user?.name || ''}
+                label="Mode"
+                value="Utilisation personnelle"
                 disabled
               />
             </div>

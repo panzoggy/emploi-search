@@ -110,20 +110,4 @@ router.get('/stats', asyncHandler(async (req, res) => {
   })
 }))
 
-router.post('/register', asyncHandler(async (req, res) => {
-  const { email, name } = req.body
-  
-  if (!email) throw new AppError(400, 'Email is required')
-  
-  let user = await prisma.user.findUnique({ where: { email } })
-  
-  if (!user) {
-    user = await prisma.user.create({
-      data: { email, name },
-    })
-  }
-  
-  res.json({ user: { id: user.id, email: user.email, name: user.name } })
-}))
-
 export default router

@@ -1,8 +1,8 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Search, History, Settings, LogOut, User, Menu, X } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { LayoutDashboard, Search, History, Settings, Menu, X } from 'lucide-react'
 import { Button } from './Button'
 import { cn } from '../utils/cn'
+import { useState } from 'react'
 
 const navigation = [
   { name: 'Tableau de bord', href: '/', icon: LayoutDashboard },
@@ -12,7 +12,6 @@ const navigation = [
 ]
 
 export function Header() {
-  const { user, logout } = useAuth()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
@@ -49,32 +48,15 @@ export function Header() {
           </div>
         </div>
         
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex sm:items-center sm:gap-4">
-            {user && (
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">{user.name || user.email}</p>
-                  <p className="text-xs text-gray-500">{user.email}</p>
-                </div>
-                <Button variant="ghost" size="sm" onClick={logout}>
-                  <LogOut className="h-4 w-4 mr-1" />
-                  Déconnexion
-                </Button>
-              </div>
-            )}
-          </div>
-          
-          <button
-            className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-expanded={mobileMenuOpen}
-            aria-controls="mobile-menu"
-            aria-label="Toggle menu"
-          >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
+        <button
+          className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-expanded={mobileMenuOpen}
+          aria-controls="mobile-menu"
+          aria-label="Toggle menu"
+        >
+          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
       </nav>
       
       {mobileMenuOpen && (
@@ -96,23 +78,9 @@ export function Header() {
                 {item.name}
               </Link>
             ))}
-            {user && (
-              <div className="pt-4 border-t flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">{user.name || user.email}</p>
-                  <p className="text-sm text-gray-500">{user.email}</p>
-                </div>
-                <Button variant="outline" size="sm" onClick={logout}>
-                  <LogOut className="h-4 w-4 mr-1" />
-                  Déconnexion
-                </Button>
-              </div>
-            )}
           </div>
         </div>
       )}
     </header>
   )
 }
-
-import { useState } from 'react'
