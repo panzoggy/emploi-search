@@ -14,64 +14,86 @@ export class HelloWorkScraper extends BaseScraper {
       for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
         const searchUrl = `${this.baseUrl}/fr-fr/emploi/recherche.html?k=${encodeURIComponent(query)}&l=${encodeURIComponent(location)}&p=${pageNum}`
         
+        console.log(`[HELLOWORK] Fetching page ${pageNum}: ${searchUrl}`)
         await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 })
         await this.randomDelay()
         
-        const jobCards = await page.$$('.job-offer, .offer-item, [data-testid="job-offer"]')
+        // Try multiple selectors for HelloWork
+        let jobCards = await page.$$('.job-offer, .offer-item, [data-testid="job-offer"], .tw-border.tw-rounded-lg, .job-card, .job-result, .offer-card')
         
         if (jobCards.length === 0) {
-          const altCards = await page.$$('.tw-border.tw-rounded-lg, .job-card')
-          if (altCards.length === 0) break
-          for (const card of altCards) {
-            try {
-              const job = await this.extractJobFromCard(page, card)
-              if (job) jobs.push(job)
-            } catch (error) {
-              console.error('Error extracting HelloWork job:', error)
-            }
-          }
-          continue
+          console.log(`[HELLOWORK] No job cards found on page ${pageNum}, trying alternative selectors`)
+          jobCards = await page.$$('.job-offer-item, .result-item, [data-offer-id], .job-listing')
         }
+        
+        if (jobCards.length === 0) {
+          console.log(`[HELLOWORK] Still no job cards found on page ${pageNum}`)
+          const pageContent = await page.content()
+          console.log(`[HELLOWORK] Page content length: ${pageContent.length}`)
+          break
+        }
+        
+        console.log(`[HELLOWORK] Found ${jobCards.length} job cards on page ${pageNum}`)
         
         for (const card of jobCards) {
           try {
             const job = await this.extractJobFromCard(page, card)
             if (job) jobs.push(job)
           } catch (error) {
-            console.error('Error extracting HelloWork job:', error)
+            console.error('[HELLOWORK] Error extracting job:', error)
           }
         }
         
-        const nextButton = await page.$('a[rel="next"], .pagination-next')
+        const nextButton = await page.$('a[rel="next"], .pagination-next, .pagination a:last-child')
         if (!nextButton) break
       }
     } finally {
       await page.close()
     }
     
+    console.log(`[HELLOWORK] Total jobs found: ${jobs.length}`)
     return jobs
   }
   
   private async extractJobFromCard(page: Page, card: any): Promise<ScrapedJob | null> {
-    const titleEl = await card.$('h3 a, h2 a, .job-title a, [data-testid="job-title"]')
-    const title = await titleEl?.evaluate((el: any) => el.textContent?.trim())
+    // Try multiple selectors for title
+    let titleEl = await card.$('h3 a, h2 a, .job-title a, [data-testid="job-title"], .job-title, .offer-title a, h3, h2')
+    let title = await titleEl?.evaluate((el: any) => el.textContent?.trim())
+    
+    if (!title) {
+      titleEl = await card.$('.title, .job-title, [title], h3 a, h2 a')
+      title = await titleEl?.evaluate((el: any) => el.textContent?.trim())
+    }
+    
     if (!title) return null
     
-    const linkEl = await card.$('h3 a, h2 a, .job-title a, [data-testid="job-title"]')
+    const linkEl = await card.$('h3 a, h2 a, .job-title a, [data-testid="job-title"], .offer-title a, a[href*="/offre-emploi/"]')
     const href = await linkEl?.evaluate((el: any) => el.getAttribute('href'))
     const url = href?.startsWith('http') ? href : `${this.baseUrl}${href}`
     
-    const companyEl = await card.$('.company-name, .job-company, [data-testid="company-name"]')
-    const company = await companyEl?.evaluate((el: any) => el.textContent?.trim()) || 'Unknown'
+    // Try multiple selectors for company
+    let companyEl = await card.$('.company-name, .job-company, [data-testid="company-name"], .company, .companyName')
+    let company = await companyEl?.evaluate((el: any) => el.textContent?.trim())
     
-    const locationEl = await card.$('.job-location, .location, [data-testid="job-location"]')
-    const location = await locationEl?.evaluate((el: any) => el.textContent?.trim()) || ''
+    if (!company || company === 'Unknown') {
+      companyEl = await card.$('.company, .employer, .entreprise, [data-company-name]')
+      company = await companyEl?.evaluate((el: any) => el.textContent?.trim()) || 'Unknown'
+    }
     
-    const salaryEl = await card.$('.salary, .job-salary, [data-testid="salary"]')
+    // Try multiple selectors for location
+    let locationEl = await card.$('.job-location, .location, [data-testid="job-location"], .job-location, .lieu')
+    let location = await locationEl?.evaluate((el: any) => el.textContent?.trim())
+    
+    if (!location) {
+      locationEl = await card.$('.location, .job-location, [data-testid="job-location"]')
+      location = await locationEl?.evaluate((el: any) => el.textContent?.trim()) || ''
+    }
+    
+    const salaryEl = await card.$('.salary, .job-salary, [data-testid="salary"], .salaire, .remuneration')
     const salaryText = await salaryEl?.evaluate((el: any) => el.textContent?.trim())
     const { min: salaryMin, max: salaryMax } = this.parseSalary(salaryText)
     
-    const typeEl = await card.$('.contract-type, .job-type, [data-testid="contract-type"]')
+    const typeEl = await card.$('.contract-type, .job-type, [data-testid="contract-type"], .type-contrat, .contrat')
     const contractType = await typeEl?.evaluate((el: any) => el.textContent?.trim())
     
     const externalId = this.extractJobId(url)
@@ -81,7 +103,7 @@ export class HelloWorkScraper extends BaseScraper {
       try {
         await page.goto(url, { waitUntil: 'networkidle2', timeout: 15000 })
         await this.randomDelay(500, 1500)
-        const descEl = await page.$('.job-description, .offer-description, [data-testid="job-description"]')
+        const descEl = await page.$('.job-description, .offer-description, [data-testid="job-description"], .description, .job-detail')
         description = await descEl?.evaluate((el: any) => el.textContent?.trim()) || ''
       } catch {
         description = ''
@@ -104,7 +126,7 @@ export class HelloWorkScraper extends BaseScraper {
   }
   
   private extractJobId(url: string): string {
-    const match = url.match(/\/offre-emploi\/([^/]+)/) || url.match(/[?&]id=(\d+)/)
+    const match = url.match(/\/offre-emploi\/([^/]+)/) || url.match(/[?&]id=(\d+)/) || url.match(/offre-emploi\/([^\/]+)/)
     return match?.[1] || url
   }
   

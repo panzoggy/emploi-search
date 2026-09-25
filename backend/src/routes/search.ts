@@ -42,8 +42,10 @@ router.post('/', asyncHandler(async (req, res) => {
   console.log('[SEARCH] Scraping completed, results:', results.map(r => ({ source: r.source, jobs: r.jobs.length, error: r.error })))
   
   let totalJobs = 0
+  let hasAnyJobs = false
   for (const result of results) {
     if (result.jobs.length > 0) {
+      hasAnyJobs = true
       console.log(`[SEARCH] Saving ${result.jobs.length} jobs from ${result.source}`)
       const saved = await prisma.job.createMany({
         data: result.jobs.map(job => ({
@@ -77,15 +79,33 @@ router.post('/', asyncHandler(async (req, res) => {
     }
   }
   
-  const jobs = await prisma.job.findMany({
-    where: { searchId: search.id },
-    orderBy: { postedAt: 'desc' },
-    take: params.limit,
-    include: {
-      views: { where: { userId }, select: { viewedAt: true } },
-      rejections: { where: { userId }, select: { rejectedAt: true, reason: true } },
-    },
-  })
+  // If no new jobs found from scrapers, return existing unviewed/unrejected jobs as fallback
+  let jobs
+  if (hasAnyJobs) {
+    jobs = await prisma.job.findMany({
+      where: { searchId: search.id },
+      orderBy: { postedAt: 'desc' },
+      take: params.limit,
+      include: {
+        views: { where: { userId }, select: { viewedAt: true } },
+        rejections: { where: { userId }, select: { rejectedAt: true, reason: true } },
+      },
+    })
+  } else {
+    console.log('[SEARCH] No new jobs found from scrapers, returning fallback jobs')
+    jobs = await prisma.job.findMany({
+      where: {
+        views: { none: { userId } },
+        rejections: { none: { userId } },
+      },
+      orderBy: { postedAt: 'desc' },
+      take: params.limit,
+      include: {
+        views: { where: { userId }, select: { viewedAt: true } },
+        rejections: { where: { userId }, select: { rejectedAt: true, reason: true } },
+      },
+    })
+  }
   
   res.json({
     search: { ...search, totalJobs },
