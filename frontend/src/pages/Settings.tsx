@@ -5,7 +5,6 @@ import { Input } from '../components/Input'
 import { Card } from '../components/Card'
 import { userApi } from '../services/api'
 import toast from 'react-hot-toast'
-import type { UserPreferences } from '../types'
 
 const CONTRACT_TYPES = ['CDI', 'CDD', 'Freelance', 'Stage', 'Alternance']
 const EXPERIENCE_LEVELS = [
@@ -16,7 +15,6 @@ const EXPERIENCE_LEVELS = [
 ]
 
 export function SettingsPage() {
-  const [preferences, setPreferences] = useState<UserPreferences | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   
@@ -34,7 +32,6 @@ export function SettingsPage() {
     const fetchPrefs = async () => {
       try {
         const res = await userApi.getPreferences()
-        setPreferences(res.data)
         setFormData({
           keywords: res.data.keywords.join(', '),
           locations: res.data.locations.join(', '),
@@ -216,10 +213,10 @@ export function SettingsPage() {
               Ces actions sont irréversibles. Utilisez-les avec précaution.
             </p>
             <div className="flex items-center gap-4">
-              <Button variant="destructive" onClick={() => { if (confirm('Supprimer tout l\'historique des recherches ?')) { /* TODO */ toast.info('Non implémenté') } }}>
+              <Button variant="destructive" onClick={() => { if (confirm('Supprimer tout l\'historique des recherches ?')) { /* TODO */ toast('Non implémenté') } }}>
                 Supprimer l'historique
               </Button>
-              <Button variant="destructive" onClick={() => { if (confirm('Supprimer toutes les offres rejetées ?')) { /* TODO */ toast.info('Non implémenté') } }}>
+              <Button variant="destructive" onClick={() => { if (confirm('Supprimer toutes les offres rejetées ?')) { /* TODO */ toast('Non implémenté') } }}>
                 Réinitialiser les rejets
               </Button>
             </div>

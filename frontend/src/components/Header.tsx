@@ -1,6 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
 import { LayoutDashboard, Search, History, Settings, Menu, X } from 'lucide-react'
-import { Button } from './Button'
 import { cn } from '../utils/cn'
 import { useState } from 'react'
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { Search, Trash2, Loader2, Eye, X } from 'lucide-react'
+import { Search, Loader2, Eye, X } from 'lucide-react'
 import { Header } from '../components/Header'
 import { Button } from '../components/Button'
 import { Pagination } from '../components/Pagination'
@@ -21,7 +21,6 @@ export function HistoryPage() {
     totalPages: 0,
   })
   const [expandedSearchId, setExpandedSearchId] = useState<string | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
   
   const fetchHistory = async () => {
     setLoading(true)
@@ -45,21 +44,6 @@ export function HistoryPage() {
   useEffect(() => {
     fetchHistory()
   }, [pagination.page])
-  
-  const handleDelete = async (searchId: string) => {
-    if (!confirm('Supprimer cette recherche de l\'historique ?')) return
-    
-    setDeletingId(searchId)
-    try {
-      await searchApi.deleteSearch(searchId)
-      setSearches(prev => prev.filter(s => s.id !== searchId))
-      toast.success('Recherche supprimée')
-    } catch (error) {
-      toast.error('Erreur lors de la suppression')
-    } finally {
-      setDeletingId(null)
-    }
-  }
   
   const handleViewJob = async (jobId: string) => {
     try {

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { Job, Search, JobFilters, SearchFilters, JobStats, UserStats, ScrapingLog, User, UserPreferences } from '../types'
+import type { Job, Search, JobFilters, SearchFilters, JobStats, UserStats, ScrapingLog, UserPreferences } from '../types'
 
 const api = axios.create({
   baseURL: '/api',

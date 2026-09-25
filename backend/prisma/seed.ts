@@ -1,4 +1,4 @@
-import { PrismaClient, JobSource } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -22,9 +22,9 @@ async function main() {
     update: {},
     create: {
       userId: user.id,
-      keywords: ['développeur', 'software engineer', 'fullstack', 'react', 'node.js'],
-      locations: ['Paris', 'Lyon', 'Remote', 'Télétravail'],
-      contractTypes: ['CDI', 'Freelance', 'CDD'],
+      keywords: JSON.stringify(['développeur', 'software engineer', 'fullstack', 'react', 'node.js']),
+      locations: JSON.stringify(['Paris', 'Lyon', 'Remote', 'Télétravail']),
+      contractTypes: JSON.stringify(['CDI', 'Freelance', 'CDD']),
       remoteOnly: false,
       salaryMin: 40000,
       salaryMax: 80000,
@@ -37,7 +37,7 @@ async function main() {
   const sampleJobs = [
     {
       externalId: 'indeed-1',
-      source: JobSource.INDEED,
+      source: 'INDEED',
       title: 'Développeur Full Stack React/Node.js',
       company: 'TechCorp',
       location: 'Paris',
@@ -52,7 +52,7 @@ async function main() {
     },
     {
       externalId: 'hellowork-1',
-      source: JobSource.HELLOWORK,
+      source: 'HELLOWORK',
       title: 'Ingénieur Logiciel Senior',
       company: 'StartupXYZ',
       location: 'Lyon',
@@ -67,7 +67,7 @@ async function main() {
     },
     {
       externalId: 'linkedin-1',
-      source: JobSource.LINKEDIN,
+      source: 'LINKEDIN',
       title: 'Frontend Developer React',
       company: 'DigitalAgency',
       location: 'Remote',

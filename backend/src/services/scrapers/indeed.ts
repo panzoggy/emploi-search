@@ -1,4 +1,5 @@
 import { BaseScraper, ScrapedJob, SearchOptions } from '../scraper.js'
+import type { Page } from 'puppeteer'
 
 export class IndeedScraper extends BaseScraper {
   protected source = 'INDEED' as const
@@ -42,28 +43,28 @@ export class IndeedScraper extends BaseScraper {
   
   private async extractJobFromCard(page: Page, card: any): Promise<ScrapedJob | null> {
     const titleEl = await card.$('h2 a, h2 span')
-    const title = await titleEl?.evaluate(el => el.textContent?.trim())
+    const title = await titleEl?.evaluate((el: any) => el.textContent?.trim())
     if (!title) return null
     
     const linkEl = await card.$('h2 a')
-    const href = await linkEl?.evaluate(el => el.getAttribute('href'))
+    const href = await linkEl?.evaluate((el: any) => el.getAttribute('href'))
     const url = href ? `https://fr.indeed.com${href}` : ''
     
     const companyEl = await card.$('[data-testid="company-name"], .companyName')
-    const company = await companyEl?.evaluate(el => el.textContent?.trim()) || 'Unknown'
+    const company = await companyEl?.evaluate((el: any) => el.textContent?.trim()) || 'Unknown'
     
     const locationEl = await card.$('[data-testid="job-location"], .companyLocation')
-    const location = await locationEl?.evaluate(el => el.textContent?.trim()) || ''
+    const location = await locationEl?.evaluate((el: any) => el.textContent?.trim()) || ''
     
     const salaryEl = await card.$('[data-testid="salary-snippet"], .salary-snippet')
-    const salaryText = await salaryEl?.evaluate(el => el.textContent?.trim())
+    const salaryText = await salaryEl?.evaluate((el: any) => el.textContent?.trim())
     const { min: salaryMin, max: salaryMax } = this.parseSalary(salaryText)
     
     const typeEl = await card.$('[data-testid="job-type"], .jobType')
-    const contractType = await typeEl?.evaluate(el => el.textContent?.trim())
+    const contractType = await typeEl?.evaluate((el: any) => el.textContent?.trim())
     
     const remoteEl = await card.$('[data-testid="remote-type"], .remoteType')
-    const remoteType = await remoteEl?.evaluate(el => el.textContent?.trim())
+    const remoteType = await remoteEl?.evaluate((el: any) => el.textContent?.trim())
     
     const externalId = this.extractJobId(url)
     
@@ -73,7 +74,7 @@ export class IndeedScraper extends BaseScraper {
         await page.goto(url, { waitUntil: 'networkidle2', timeout: 15000 })
         await this.randomDelay(500, 1500)
         const descEl = await page.$('#jobDescriptionText, .jobsearch-jobDescriptionText')
-        description = await descEl?.evaluate(el => el.textContent?.trim()) || ''
+        description = await descEl?.evaluate((el: any) => el.textContent?.trim()) || ''
       } catch {
         description = ''
       }

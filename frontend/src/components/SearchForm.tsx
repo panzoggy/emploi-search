@@ -76,10 +76,6 @@ export function SearchForm({ onSearchComplete }: { onSearchComplete: () => void 
     setSources(prev => prev.includes(source) ? prev.filter(s => s !== source) : [...prev, source])
   }
   
-  const toggleContract = (contract: string) => {
-    setContractTypes(prev => prev.includes(contract) ? prev.filter(c => c !== contract) : [...prev, contract])
-  }
-  
   return (
     <form onSubmit={handleSubmit} className="card p-6 space-y-4">
       <h2 className="text-xl font-semibold flex items-center gap-2">

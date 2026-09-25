@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, Request, Response } from 'express'
 import { prisma } from '../index.js'
 import { asyncHandler, AppError } from '../middleware/errorHandler.js'
 import { paginationSchema } from '../validators/index.js'

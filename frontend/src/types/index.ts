@@ -43,7 +43,7 @@ export interface Job {
   viewedAt?: string
   rejected: boolean
   rejectedAt?: string
-  rejectionReason?: string
+  rejectionReason: string | null
 }
 
 export interface Search {
@@ -79,6 +79,11 @@ export interface JobFilters {
   sortOrder?: 'asc' | 'desc'
   page?: number
   limit?: number
+  contractType?: string
+  experienceLevel?: string
+  salaryMin?: number
+  salaryMax?: number
+  remoteOnly?: boolean
 }
 
 export interface PaginatedResponse<T> {

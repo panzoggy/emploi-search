@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, Request, Response } from 'express'
 import { prisma } from '../index.js'
 import { asyncHandler, AppError } from '../middleware/errorHandler.js'
 import { searchSchema, paginationSchema } from '../validators/index.js'
@@ -46,7 +46,6 @@ router.post('/', asyncHandler(async (req, res) => {
           ...job,
           searchId: search.id,
         })),
-        skipDuplicates: true,
       })
       totalJobs += saved.count
       

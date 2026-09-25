@@ -1,4 +1,5 @@
 import { BaseScraper, ScrapedJob, SearchOptions } from '../scraper.js'
+import type { Page } from 'puppeteer'
 
 export class HelloWorkScraper extends BaseScraper {
   protected source = 'HELLOWORK' as const
@@ -53,25 +54,25 @@ export class HelloWorkScraper extends BaseScraper {
   
   private async extractJobFromCard(page: Page, card: any): Promise<ScrapedJob | null> {
     const titleEl = await card.$('h3 a, h2 a, .job-title a, [data-testid="job-title"]')
-    const title = await titleEl?.evaluate(el => el.textContent?.trim())
+    const title = await titleEl?.evaluate((el: any) => el.textContent?.trim())
     if (!title) return null
     
     const linkEl = await card.$('h3 a, h2 a, .job-title a, [data-testid="job-title"]')
-    const href = await linkEl?.evaluate(el => el.getAttribute('href'))
+    const href = await linkEl?.evaluate((el: any) => el.getAttribute('href'))
     const url = href?.startsWith('http') ? href : `${this.baseUrl}${href}`
     
     const companyEl = await card.$('.company-name, .job-company, [data-testid="company-name"]')
-    const company = await companyEl?.evaluate(el => el.textContent?.trim()) || 'Unknown'
+    const company = await companyEl?.evaluate((el: any) => el.textContent?.trim()) || 'Unknown'
     
     const locationEl = await card.$('.job-location, .location, [data-testid="job-location"]')
-    const location = await locationEl?.evaluate(el => el.textContent?.trim()) || ''
+    const location = await locationEl?.evaluate((el: any) => el.textContent?.trim()) || ''
     
     const salaryEl = await card.$('.salary, .job-salary, [data-testid="salary"]')
-    const salaryText = await salaryEl?.evaluate(el => el.textContent?.trim())
+    const salaryText = await salaryEl?.evaluate((el: any) => el.textContent?.trim())
     const { min: salaryMin, max: salaryMax } = this.parseSalary(salaryText)
     
     const typeEl = await card.$('.contract-type, .job-type, [data-testid="contract-type"]')
-    const contractType = await typeEl?.evaluate(el => el.textContent?.trim())
+    const contractType = await typeEl?.evaluate((el: any) => el.textContent?.trim())
     
     const externalId = this.extractJobId(url)
     
@@ -81,7 +82,7 @@ export class HelloWorkScraper extends BaseScraper {
         await page.goto(url, { waitUntil: 'networkidle2', timeout: 15000 })
         await this.randomDelay(500, 1500)
         const descEl = await page.$('.job-description, .offer-description, [data-testid="job-description"]')
-        description = await descEl?.evaluate(el => el.textContent?.trim()) || ''
+        description = await descEl?.evaluate((el: any) => el.textContent?.trim()) || ''
       } catch {
         description = ''
       }

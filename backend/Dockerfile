@@ -11,6 +11,7 @@ RUN apk add --no-cache \
     ca-certificates \
     ttf-freefont \
     sqlite \
+    openssl \
     && rm -rf /var/cache/apk/*
 
 # Tell Puppeteer to use installed Chromium

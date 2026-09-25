@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { ExternalLink, Eye, X, Briefcase, MapPin, Euro, Clock, Home } from 'lucide-react'
+import { ExternalLink, Eye, X, Briefcase, MapPin, Euro, Home } from 'lucide-react'
 import { cn } from '../utils/cn'
 import type { Job } from '../types'
 import { Button } from './Button'
@@ -37,8 +37,8 @@ export function JobCard({ job, onView, onReject, onUnreject, viewMode = 'list' }
             {sourceLabels[job.source]}
           </span>
           <div className="flex items-center gap-1">
-            {isViewed && <Eye className="h-4 w-4 text-gray-400" title="Vu" />}
-            {isRejected && <X className="h-4 w-4 text-red-500" title="Rejeté" />}
+            {isViewed && <Eye className="h-4 w-4 text-gray-400" aria-label="Vu" />}
+            {isRejected && <X className="h-4 w-4 text-red-500" aria-label="Rejeté" />}
           </div>
         </div>
         <h3 className={cn('font-semibold text-gray-900 mb-1 line-clamp-2', isRejected && 'line-through text-gray-500')}>
@@ -107,8 +107,8 @@ export function JobCard({ job, onView, onReject, onUnreject, viewMode = 'list' }
             <span className={cn('badge', sourceColors[job.source])}>
               {sourceLabels[job.source]}
             </span>
-            {isViewed && <Eye className="h-4 w-4 text-gray-400" title="Vu" />}
-            {isRejected && <X className="h-4 w-4 text-red-500" title="Rejeté" />}
+            {isViewed && <Eye className="h-4 w-4 text-gray-400" aria-label="Vu" />}
+            {isRejected && <X className="h-4 w-4 text-red-500" aria-label="Rejeté" />}
           </div>
           <h3 className={cn('font-semibold text-gray-900 mb-1', isRejected && 'line-through text-gray-500')}>
             {job.title}

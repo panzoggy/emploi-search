@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { X, Filter, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '../utils/cn'
 import { Button } from './Button'
@@ -189,5 +189,3 @@ export function FilterPanel({ onSearch }: { onSearch: () => void }) {
     </form>
   )
 }
-
-import { useState } from 'react'

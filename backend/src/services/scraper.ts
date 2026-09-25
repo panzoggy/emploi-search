@@ -1,6 +1,8 @@
 import puppeteer, { Browser, Page } from 'puppeteer'
-import { prisma, JobSource } from '../index.js'
+import { prisma } from '../index.js'
 import { AppError } from '../middleware/errorHandler.js'
+
+export type JobSource = 'INDEED' | 'HELLOWORK' | 'LINKEDIN'
 
 export interface ScrapedJob {
   externalId: string
@@ -99,6 +101,7 @@ export interface SearchOptions {
   salaryMax?: number
   experienceLevel?: string
   maxPages?: number
+  sources?: JobSource[]
 }
 
 export async function createScraper(source: JobSource): Promise<BaseScraper> {

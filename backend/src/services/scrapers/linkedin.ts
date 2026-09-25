@@ -1,4 +1,5 @@
 import { BaseScraper, ScrapedJob, SearchOptions } from '../scraper.js'
+import type { Page } from 'puppeteer'
 
 export class LinkedInScraper extends BaseScraper {
   protected source = 'LINKEDIN' as const
@@ -41,18 +42,18 @@ export class LinkedInScraper extends BaseScraper {
   
   private async extractJobFromCard(page: Page, card: any): Promise<ScrapedJob | null> {
     const titleEl = await card.$('h3 a, h3 span, .base-search-card__title')
-    const title = await titleEl?.evaluate(el => el.textContent?.trim())
+    const title = await titleEl?.evaluate((el: any) => el.textContent?.trim())
     if (!title) return null
     
     const linkEl = await card.$('h3 a, .base-card__full-link, a[data-tracking-control-name]')
-    const href = await linkEl?.evaluate(el => el.getAttribute('href'))
+    const href = await linkEl?.evaluate((el: any) => el.getAttribute('href'))
     const url = href?.split('?')[0] || ''
     
     const companyEl = await card.$('h4 a, .base-search-card__subtitle, [data-tracking-control-name="public_jobs_topcard-org-name"]')
-    const company = await companyEl?.evaluate(el => el.textContent?.trim()) || 'Unknown'
+    const company = await companyEl?.evaluate((el: any) => el.textContent?.trim()) || 'Unknown'
     
     const locationEl = await card.$('.job-search-card__location, .base-search-card__metadata span')
-    const location = await locationEl?.evaluate(el => el.textContent?.trim()) || ''
+    const location = await locationEl?.evaluate((el: any) => el.textContent?.trim()) || ''
     
     const externalId = this.extractJobId(url)
     
@@ -67,16 +68,16 @@ export class LinkedInScraper extends BaseScraper {
         await this.randomDelay(1000, 2000)
         
         const descEl = await page.$('.show-more-less-html__markup, .description__text, .jobs-description__content')
-        description = await descEl?.evaluate(el => el.textContent?.trim()) || ''
+        description = await descEl?.evaluate((el: any) => el.textContent?.trim()) || ''
         
         const salaryEl = await page.$('.salary, .compensation__salary, [data-test="job-salary"]')
-        const salaryText = await salaryEl?.evaluate(el => el.textContent?.trim())
+        const salaryText = await salaryEl?.evaluate((el: any) => el.textContent?.trim())
         const parsed = this.parseSalary(salaryText)
         salaryMin = parsed.min
         salaryMax = parsed.max
         
         const typeEl = await page.$('.job-criteria__item:has-text("Type") .job-criteria__text, [data-test="job-type"]')
-        contractType = await typeEl?.evaluate(el => el.textContent?.trim())
+        contractType = await typeEl?.evaluate((el: any) => el.textContent?.trim())
         
       } catch {
         // Ignore errors for detail page

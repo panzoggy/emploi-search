@@ -17,7 +17,7 @@ export const prisma = new PrismaClient({
 })
 
 const app = express()
-const PORT = process.env.PORT || 4000
+const PORT = Number(process.env.PORT) || 4000
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },

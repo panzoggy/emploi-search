@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -24,9 +25,9 @@ model UserPreferences {
   id              String   @id @default(cuid())
   userId          String   @unique
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  keywords        String[] @default([])
-  locations       String[] @default([])
-  contractTypes   String[] @default([])
+  keywords        String   @default("[]")
+  locations       String   @default("[]")
+  contractTypes   String   @default("[]")
   remoteOnly      Boolean  @default(false)
   salaryMin       Int?
   salaryMax       Int?
@@ -41,7 +42,7 @@ model Search {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   query       String
   location    String
-  filters     Json     @default("{}")
+  filters     String   @default("{}")
   results     Job[]    @relation("SearchResults")
   createdAt   DateTime @default(now())
 }
@@ -49,11 +50,11 @@ model Search {
 model Job {
   id              String   @id @default(cuid())
   externalId      String
-  source          JobSource
+  source          String
   title           String
   company         String
   location        String
-  description     String   @db.Text
+  description     String
   url             String   @unique
   salaryMin       Int?
   salaryMax       Int?
@@ -103,25 +104,12 @@ model JobRejection {
 
 model ScrapingLog {
   id        String   @id @default(cuid())
-  source    JobSource
+  source    String
   query     String
   location  String
-  status    ScrapingStatus
+  status    String
   jobsFound Int      @default(0)
-  error     String?  @db.Text
+  error     String?
   startedAt DateTime @default(now())
   finishedAt DateTime?
-}
-
-enum JobSource {
-  INDEED
-  HELLOWORK
-  LINKEDIN
-}
-
-enum ScrapingStatus {
-  PENDING
-  RUNNING
-  COMPLETED
-  FAILED
 }
