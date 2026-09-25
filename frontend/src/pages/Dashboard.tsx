@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useJobStore } from '../store/jobStore'
 import { jobsApi } from '../services/api'
-import { Header } from '../components/Header'
 import { FilterPanel } from '../components/FilterPanel'
 import { JobCard } from '../components/JobCard'
 import { Pagination } from '../components/Pagination'
@@ -118,9 +117,7 @@ export function Dashboard() {
   }
   
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <>
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Tableau de bord</h1>
           <p className="text-gray-500 mt-1">Gérez et filtrez vos offres d'emploi</p>
@@ -201,7 +198,6 @@ export function Dashboard() {
             )}
           </div>
         </div>
-      </main>
-    </div>
+    </>
   )
 }

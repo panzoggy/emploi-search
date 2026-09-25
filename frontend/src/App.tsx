@@ -7,24 +7,17 @@ import { SettingsPage } from './pages/Settings'
 
 export default function App() {
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <div className="min-h-screen bg-gray-50">
-            <Header />
-            <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="search" element={<SearchPage />} />
-                <Route path="history" element={<HistoryPage />} />
-                <Route path="settings" element={<SettingsPage />} />
-              </Routes>
-            </main>
-          </div>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/history" element={<HistoryPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+    </div>
   )
 }

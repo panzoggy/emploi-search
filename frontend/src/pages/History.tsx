@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { Search, Loader2, Eye, X } from 'lucide-react'
-import { Header } from '../components/Header'
 import { Button } from '../components/Button'
 import { Pagination } from '../components/Pagination'
 import { Card } from '../components/Card'
@@ -107,9 +106,7 @@ export function HistoryPage() {
   }
   
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <>
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Historique des recherches</h1>
           <p className="text-gray-500 mt-1">Retrouvez vos recherches passées et leurs résultats</p>
@@ -248,7 +245,6 @@ export function HistoryPage() {
             )}
           </>
         )}
-      </main>
-    </div>
+    </>
   )
 }

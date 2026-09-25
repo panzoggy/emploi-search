@@ -3,22 +3,17 @@ import type { Job, Search, JobFilters, SearchFilters, JobStats, UserStats, Scrap
 
 const api = axios.create({
   baseURL: '/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 })
 
-// Use a fixed user ID for personal use
 const DEFAULT_USER_ID = 'personal-user'
 
-// Initialize user ID on first load
 if (!localStorage.getItem('userId')) {
   localStorage.setItem('userId', DEFAULT_USER_ID)
 }
 
 api.interceptors.request.use((config) => {
-  const userId = localStorage.getItem('userId') || DEFAULT_USER_ID
-  config.headers['x-user-id'] = userId
+  config.headers['x-user-id'] = localStorage.getItem('userId') || DEFAULT_USER_ID
   return config
 })
 
@@ -39,8 +34,14 @@ export const jobsApi = {
 }
 
 export const searchApi = {
+  // Launches search in background, returns immediately
   createSearch: (data: { query: string; location: string } & SearchFilters) =>
-    api.post<{ search: Search; jobs: Job[] }>('/search', data),
+    api.post<{ search: Search; message: string }>('/search', data),
+
+  // Poll until search is done
+  pollStatus: (searchId: string) =>
+    api.get<{ searchId: string; status: 'running' | 'done' | 'error'; jobsFound: number; error?: string }>(`/search/${searchId}/status`),
+
   getHistory: (page = 1, limit = 20) =>
     api.get<{ searches: Search[]; pagination: any }>('/search/history', { params: { page, limit } }),
   getSearch: (id: string) => api.get<Search>(`/search/${id}`),
