@@ -249,8 +249,3 @@ MIT License - Feel free to use and modify.
 2. Create feature branch
 3. Commit changes
 4. Push and create PR
-
----
-
-**Deployed on**: Debian server at 192.168.1.194  
-**Access**: http://192.168.1.194
