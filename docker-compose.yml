@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: emploi-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DATABASE_URL=file:/app/data/dev.db
+      - FRONTEND_URL=http://192.168.1.194
+    volumes:
+      - backend_data:/app/data
+      - ./backend/.env:/app/.env:ro
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - emploi-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: emploi-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - emploi-network
+
+  # Optional: Database backup service
+  backup:
+    image: alpine:latest
+    container_name: emploi-backup
+    restart: unless-stopped
+    volumes:
+      - backend_data:/data
+      - ./backups:/backups
+    entrypoint: |
+      sh -c "
+        apk add --no-cache sqlite3 cron
+        echo '0 2 * * * sqlite3 /data/dev.db .dump | gzip > /backups/backup_$(date +\%Y\%m\%d_\%H\%M\%S).sql.gz' > /etc/crontabs/root
+        crond -f
+      "
+    networks:
+      - emploi-network
+
+volumes:
+  backend_data:
+    driver: local
+
+networks:
+  emploi-network:
+    driver: bridge
