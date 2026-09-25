@@ -66,7 +66,7 @@ export function HistoryPage() {
       setSearches(prev => prev.map(search => ({
         ...search,
         results: search.results?.map(job => 
-          job.id === jobId ? { ...job, rejected: true, rejectedAt: new Date().toISOString(), rejectionReason: reason } : job
+          job.id === jobId ? { ...job, rejected: true, rejectedAt: new Date().toISOString(), rejectionReason: reason || null } : job
         ) || []
       })))
       toast.success('Offre rejetée')

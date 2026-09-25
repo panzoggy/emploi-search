@@ -43,7 +43,7 @@ export interface Job {
   viewedAt?: string
   rejected: boolean
   rejectedAt?: string
-  rejectionReason: string | null
+  rejectionReason: string | null | undefined
 }
 
 export interface Search {

@@ -207,7 +207,7 @@ export function SettingsPage() {
             </div>
           </Card>
           
-          <Card className="p-6 border-red-200">
+<Card className="p-6 border-red-200">
             <h2 className="text-lg font-semibold text-red-900 mb-4">Zone de danger</h2>
             <p className="text-sm text-gray-500 mb-4">
               Ces actions sont irréversibles. Utilisez-les avec précaution.

@@ -84,7 +84,7 @@ export function Dashboard() {
     try {
       await jobsApi.rejectJob(jobId, reason || undefined)
       setJobs(prev => prev.map(job => 
-        job.id === jobId ? { ...job, rejected: true, rejectedAt: new Date().toISOString(), rejectionReason: reason } : job
+        job.id === jobId ? { ...job, rejected: true, rejectedAt: new Date().toISOString(), rejectionReason: reason || null } : job
       ))
       fetchStats()
       toast.success('Offre rejetée')

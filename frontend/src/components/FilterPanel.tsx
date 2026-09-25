@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { X, Filter, ChevronDown, ChevronUp } from 'lucide-react'
-import { cn } from '../utils/cn'
 import { Button } from './Button'
 import { Input } from './Input'
 import { Select } from './Select'
@@ -107,7 +106,7 @@ export function FilterPanel({ onSearch }: { onSearch: () => void }) {
               label="Source"
               options={SOURCE_OPTIONS}
               value={filters.source || ''}
-              onChange={(e) => setFilters({ source: e.target.value || undefined })}
+              onChange={(e) => setFilters({ source: (e.target.value || undefined) as JobFilters['source'] })}
             />
             <Select
               label="Statut consulté"
