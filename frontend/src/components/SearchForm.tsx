@@ -64,9 +64,10 @@ export function SearchForm({ onSearchComplete }: { onSearchComplete: () => void 
       await searchApi.createSearch({ query: query.trim(), location: location.trim(), ...filters })
       toast.success('Recherche terminée !')
       onSearchComplete()
-    } catch (error) {
-      toast.error('Erreur lors de la recherche')
-      console.error(error)
+    } catch (error: any) {
+      const message = error.response?.data?.error || error.message || 'Erreur lors de la recherche'
+      toast.error(message)
+      console.error('Search error:', error)
     } finally {
       setLoading(false)
     }

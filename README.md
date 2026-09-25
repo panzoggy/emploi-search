@@ -9,7 +9,7 @@ A modern job search application that aggregates offers from **Indeed**, **HelloW
 - 📊 **Dashboard**: Statistics and overview of job search progress
 - 📝 **History**: Track all searches and their results
 - ⚙️ **Preferences**: Save search criteria for quick searches
-- 🐳 **Docker deployment**: Easy deployment on Debian server
+- 🐳 **Docker deployment**: Easy deployment on Debian/Ubuntu server
 - 📱 **Responsive UI**: Works on desktop and mobile
 
 ## Tech Stack
@@ -48,6 +48,9 @@ emploi/
 │   └── Dockerfile
 ├── docker-compose.yml
 ├── deploy.sh               # Deployment script
+├── start.sh                # Start script with dependency checks
+├── restart.sh              # Restart script
+├── stop.sh                 # Stop script
 └── emploi.service          # Systemd service
 ```
 
@@ -71,30 +74,27 @@ npm run dev
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:4000
 
-## Production Deployment (Debian 192.168.1.194)
+## Production Deployment (Debian/Ubuntu)
 
 ### Prerequisites
 
-- Debian 11/12 server
+- Debian 11/12 or Ubuntu 20.04/22.04/24.04 server
 - Root/sudo access
-- Domain or IP (192.168.1.194)
+- Domain or public IP
 
-### One-Command Deployment
+### Quick Deployment
 
 ```bash
-# On the Debian server
-sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/your-repo/emploi/main/deploy.sh)"
+# On the server
+git clone https://github.com/panzoggy/emploi-search.git /opt/emploi
+cd /opt/emploi
+chmod +x start.sh restart.sh stop.sh
+sudo ./start.sh
 ```
 
-Or manually:
+Or use the deploy script:
 
 ```bash
-# 1. Copy project to server
-scp -r emploi/ user@192.168.1.194:/tmp/
-
-# 2. On server
-sudo mv /tmp/emploi /opt/emploi
-cd /opt/emploi
 sudo ./deploy.sh
 ```
 
@@ -111,7 +111,7 @@ sudo ./deploy.sh
    ```bash
    cd /opt/emploi
    cp backend/.env.example backend/.env
-   # Edit backend/.env with your settings
+   # Edit backend/.env with your settings (FRONTEND_URL)
    ```
 
 3. **Build and start**
@@ -150,7 +150,6 @@ sudo ./deploy.sh
 - `DELETE /api/search/:id` - Delete search
 
 ### User
-- `POST /api/user/register` - Register/Login
 - `GET /api/user/profile` - Get profile
 - `GET /api/user/preferences` - Get preferences
 - `PUT /api/user/preferences` - Update preferences
@@ -213,16 +212,13 @@ Key models:
 ```bash
 # Manual backup
 docker-compose exec backend sqlite3 /app/data/dev.db .dump > backup_$(date +%Y%m%d).sql
-
-# Automated via backup service (included in docker-compose)
-# Runs daily at 2 AM
 ```
 
 ## Troubleshooting
 
 ### Puppeteer/Chromium issues
 ```bash
-# Install dependencies on Debian
+# Install dependencies on Debian/Ubuntu
 apt-get install -y chromium nss freetype harfbuzz ca-certificates ttf-freefont
 ```
 

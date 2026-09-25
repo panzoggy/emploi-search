@@ -125,14 +125,20 @@ export async function scrapeAllSources(
   location: string,
   options: SearchOptions = {}
 ): Promise<{ source: JobSource; jobs: ScrapedJob[]; error?: string }[]> {
+  console.log('[SCRAPER] Starting scrape for:', { query, location, sources: options.sources })
   const sources: JobSource[] = options.sources || ['INDEED', 'HELLOWORK', 'LINKEDIN']
   const results = await Promise.allSettled(
     sources.map(async (source) => {
+      console.log(`[SCRAPER] Starting ${source} scraper`)
       const scraper = await createScraper(source)
       await scraper.init()
       try {
         const jobs = await scraper.search(query, location, options)
+        console.log(`[SCRAPER] ${source} found ${jobs.length} jobs`)
         return { source, jobs }
+      } catch (err) {
+        console.error(`[SCRAPER] ${source} error:`, err)
+        throw err
       } finally {
         await scraper.close()
       }
@@ -143,10 +149,12 @@ export async function scrapeAllSources(
     if (result.status === 'fulfilled') {
       return result.value
     }
+    const error = result.reason?.message || 'Unknown error'
+    console.error(`[SCRAPER] ${sources[index]} failed:`, error)
     return {
       source: sources[index],
       jobs: [],
-      error: result.reason?.message || 'Unknown error',
+      error,
     }
   })
 }

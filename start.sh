@@ -100,7 +100,8 @@ $COMPOSE_CMD exec -T backend npx prisma db seed || true
 
 # Show status
 echo -e "${GREEN}✅ EmploiSearch started successfully!${NC}"
-echo -e "${GREEN}🌐 Frontend: http://192.168.1.194${NC}"
-echo -e "${GREEN}🔧 Backend API: http://192.168.1.194/api${NC}"
+SERVER_IP=$(hostname -I | awk '{print $1}')
+echo -e "${GREEN}🌐 Frontend: http://$SERVER_IP${NC}"
+echo -e "${GREEN}🔧 Backend API: http://$SERVER_IP/api${NC}"
 echo ""
 $COMPOSE_CMD ps

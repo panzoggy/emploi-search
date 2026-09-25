@@ -1,6 +1,6 @@
 #!/bin/bash
-# Deployment script for Debian server (192.168.1.194)
-# Run this script on the Debian server to deploy the application
+# Deployment script for Debian/Ubuntu server
+# Run this script on the server to deploy the application
 
 set -e
 
@@ -16,6 +16,9 @@ NC='\033[0m' # No Color
 PROJECT_DIR="/opt/emploi"
 BACKUP_DIR="/opt/emploi/backups"
 DOCKER_COMPOSE_FILE="docker-compose.yml"
+
+# Get server IP for display
+SERVER_IP=$(hostname -I | awk '{print $1}')
 
 # Check if running as root or with sudo
 if [ "$EUID" -ne 0 ]; then 
@@ -56,10 +59,10 @@ cd $PROJECT_DIR
 if [ ! -f backend/.env ]; then
     echo -e "${YELLOW}⚙️ Creating .env file...${NC}"
     cp backend/.env.example backend/.env
-    echo -e "${GREEN}✅ Please edit backend/.env with your configuration${NC}"
+    echo -e "${GREEN}✅ Please edit backend/.env with your configuration (FRONTEND_URL)${NC}"
 fi
 
-# Set permissions
+# Set permissions for data directories
 chown -R 1001:1001 $PROJECT_DIR/backend/data 2>/dev/null || true
 chmod -R 755 $PROJECT_DIR/backend/data 2>/dev/null || true
 
@@ -90,12 +93,12 @@ echo -e "${YELLOW}📜 Recent logs:${NC}"
 docker-compose -f $DOCKER_COMPOSE_FILE logs --tail=20
 
 echo -e "${GREEN}✅ Deployment completed successfully!${NC}"
-echo -e "${GREEN}🌐 Application available at: http://192.168.1.194${NC}"
-echo -e "${GREEN}🔧 Backend API at: http://192.168.1.194/api${NC}"
+echo -e "${GREEN}🌐 Application available at: http://$SERVER_IP${NC}"
+echo -e "${GREEN}🔧 Backend API at: http://$SERVER_IP/api${NC}"
 echo ""
 echo -e "${YELLOW}Useful commands:${NC}"
 echo "  View logs:     docker-compose -f $PROJECT_DIR/$DOCKER_COMPOSE_FILE logs -f"
 echo "  Restart:       docker-compose -f $PROJECT_DIR/$DOCKER_COMPOSE_FILE restart"
 echo "  Stop:          docker-compose -f $PROJECT_DIR/$DOCKER_COMPOSE_FILE down"
-echo "  Update:        cd $PROJECT_DIR && git pull && ./deploy.sh"
+echo "  Update:        cd $PROJECT_DIR && git pull && ./restart.sh"
 echo "  Backup DB:     docker-compose -f $PROJECT_DIR/$DOCKER_COMPOSE_FILE exec backend sqlite3 /app/data/dev.db .dump > backup_$(date +%Y%m%d).sql"

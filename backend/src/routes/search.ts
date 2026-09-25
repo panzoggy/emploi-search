@@ -9,22 +9,24 @@ const router = Router()
 router.post('/', asyncHandler(async (req, res) => {
   const userId = req.user!.id
   const params = searchSchema.parse(req.body)
+  console.log('[SEARCH] Starting search:', { userId, query: params.query, location: params.location })
   
   const search = await prisma.search.create({
     data: {
       userId,
       query: params.query,
       location: params.location,
-      filters: {
+      filters: JSON.stringify({
         contractTypes: params.contractTypes,
         remoteOnly: params.remoteOnly,
         salaryMin: params.salaryMin,
         salaryMax: params.salaryMax,
         experienceLevel: params.experienceLevel,
         sources: params.sources,
-      },
+      }),
     },
   })
+  console.log('[SEARCH] Search created:', search.id)
   
   const scrapingOptions = {
     contractTypes: params.contractTypes,
@@ -37,10 +39,12 @@ router.post('/', asyncHandler(async (req, res) => {
   }
   
   const results = await scrapeAllSources(params.query, params.location, scrapingOptions)
+  console.log('[SEARCH] Scraping completed, results:', results.map(r => ({ source: r.source, jobs: r.jobs.length, error: r.error })))
   
   let totalJobs = 0
   for (const result of results) {
     if (result.jobs.length > 0) {
+      console.log(`[SEARCH] Saving ${result.jobs.length} jobs from ${result.source}`)
       const saved = await prisma.job.createMany({
         data: result.jobs.map(job => ({
           ...job,
@@ -48,6 +52,7 @@ router.post('/', asyncHandler(async (req, res) => {
         })),
       })
       totalJobs += saved.count
+      console.log(`[SEARCH] Saved ${saved.count} jobs from ${result.source}`)
       
       await prisma.scrapingLog.create({
         data: {
