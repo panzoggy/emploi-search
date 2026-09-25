@@ -37,8 +37,22 @@ const limiter = rateLimit({
 })
 app.use('/api/', limiter)
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+app.get('/api/health', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      database: 'connected'
+    })
+  } catch (error) {
+    res.status(503).json({ 
+      status: 'error', 
+      timestamp: new Date().toISOString(),
+      database: 'disconnected',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
 })
 
 app.use('/api/jobs', authMiddleware, jobRoutes)

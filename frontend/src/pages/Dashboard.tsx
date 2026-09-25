@@ -45,9 +45,10 @@ export function Dashboard() {
         total: jobsRes.data.pagination.total,
         totalPages: jobsRes.data.pagination.totalPages,
       }))
-    } catch (error) {
-      toast.error('Erreur lors du chargement des offres')
-      console.error(error)
+    } catch (error: any) {
+      const message = error.response?.data?.error || error.message || 'Erreur lors du chargement des offres'
+      toast.error(message)
+      console.error('Fetch jobs error:', error)
     } finally {
       setLoading(false)
     }
@@ -57,8 +58,9 @@ export function Dashboard() {
     try {
       const res = await jobsApi.getStats()
       setStats(res.data)
-    } catch (error) {
-      console.error('Failed to fetch stats:', error)
+    } catch (error: any) {
+      const message = error.response?.data?.error || error.message || 'Erreur lors du chargement des stats'
+      console.error('Fetch stats error:', error)
     }
   }
   

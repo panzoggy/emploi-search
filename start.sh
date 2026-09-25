@@ -77,26 +77,53 @@ mkdir -p backups
 sudo chown -R 1001:1001 backups 2>/dev/null || chown -R 1001:1001 backups
 chmod -R 755 backups
 
-# Pull latest images
-echo -e "${YELLOW}📥 Pulling latest images...${NC}"
-$COMPOSE_CMD pull 2>/dev/null || true
-
-# Build and start
-echo -e "${YELLOW}🔨 Building and starting containers...${NC}"
+# Build images first
+echo -e "${YELLOW}🔨 Building images...${NC}"
 $COMPOSE_CMD build --no-cache
+
+# Start only the backend first to initialize database
+echo -e "${YELLOW}🗄️ Starting backend for database initialization...${NC}"
+$COMPOSE_CMD up -d backend
+
+# Wait for backend to be ready
+echo -e "${YELLOW}⏳ Waiting for backend to be ready...${NC}"
+sleep 10
+
+# Run database migrations
+echo -e "${YELLOW}🗄️ Running database migrations...${NC}"
+if ! $COMPOSE_CMD exec -T backend npx prisma db push; then
+    echo -e "${RED}❌ Database migration failed${NC}"
+    $COMPOSE_CMD logs backend --tail=50
+    exit 1
+fi
+
+# Seed database if empty
+echo -e "${YELLOW}🌱 Seeding database...${NC}"
+if ! $COMPOSE_CMD exec -T backend npx prisma db seed; then
+    echo -e "${YELLOW}⚠️  Database seeding failed (may already have data)${NC}"
+fi
+
+# Verify database has data
+echo -e "${YELLOW}🔍 Verifying database...${NC}"
+$COMPOSE_CMD exec -T backend node -e "
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+prisma.job.count().then(count => {
+  console.log('Jobs in database:', count);
+  process.exit(0);
+}).catch(err => {
+  console.error('Database verification failed:', err);
+  process.exit(1);
+});
+"
+
+# Now start all services
+echo -e "${YELLOW}🚀 Starting all services...${NC}"
 $COMPOSE_CMD up -d
 
 # Wait for services
 echo -e "${YELLOW}⏳ Waiting for services to be ready...${NC}"
-sleep 15
-
-# Run database migrations
-echo -e "${YELLOW}🗄️ Running database migrations...${NC}"
-$COMPOSE_CMD exec -T backend npx prisma db push
-
-# Seed database if empty
-echo -e "${YELLOW}🌱 Seeding database...${NC}"
-$COMPOSE_CMD exec -T backend npx prisma db seed || true
+sleep 10
 
 # Show status
 echo -e "${GREEN}✅ EmploiSearch started successfully!${NC}"
@@ -105,3 +132,6 @@ echo -e "${GREEN}🌐 Frontend: http://$SERVER_IP${NC}"
 echo -e "${GREEN}🔧 Backend API: http://$SERVER_IP/api${NC}"
 echo ""
 $COMPOSE_CMD ps
+
+echo ""
+echo -e "${YELLOW}To view logs: $COMPOSE_CMD logs -f${NC}"
