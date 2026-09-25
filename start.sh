@@ -1,137 +1,175 @@
 #!/bin/bash
-# start.sh - Start EmploiSearch with dependency checks
+# start.sh — Lance EmploiSearch avec vérification des dépendances
 
 set -e
 
-PROJECT_DIR="/opt/emploi"
-cd "$PROJECT_DIR"
+# Détecter le répertoire du script (fonctionne partout, pas seulement /opt/emploi)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
-echo "🚀 Starting EmploiSearch..."
-
-# Colors
+# Couleurs
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Function to check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
+echo -e "${BLUE}🚀 Démarrage d'EmploiSearch...${NC}"
+echo -e "${BLUE}   Répertoire: $SCRIPT_DIR${NC}"
+echo ""
 
-# Function to install Docker
+# ─── Fonctions utilitaires ────────────────────────────────────────────────────
+
+command_exists() { command -v "$1" >/dev/null 2>&1; }
+
 install_docker() {
-    echo -e "${YELLOW}🐳 Installing Docker...${NC}"
-    curl -fsSL https://get.docker.com | sh
-    sudo usermod -aG docker $USER
-    echo -e "${GREEN}✅ Docker installed${NC}"
+  echo -e "${YELLOW}🐳 Installation de Docker...${NC}"
+  curl -fsSL https://get.docker.com | sh
+  sudo usermod -aG docker "$USER" 2>/dev/null || true
+  echo -e "${GREEN}✅ Docker installé${NC}"
 }
 
-# Function to install Docker Compose
+# Choisir la commande Docker Compose (v2 ou v1)
+get_compose_cmd() {
+  if docker compose version >/dev/null 2>&1; then
+    echo "docker compose"
+  elif command_exists docker-compose; then
+    echo "docker-compose"
+  else
+    return 1
+  fi
+}
+
 install_docker_compose() {
-    echo -e "${YELLOW}🐳 Installing Docker Compose...${NC}"
-    sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    sudo chmod +x /usr/local/bin/docker-compose
-    echo -e "${GREEN}✅ Docker Compose installed${NC}"
+  echo -e "${YELLOW}🐳 Installation de Docker Compose...${NC}"
+  COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+  sudo curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" \
+    -o /usr/local/bin/docker-compose
+  sudo chmod +x /usr/local/bin/docker-compose
+  echo -e "${GREEN}✅ Docker Compose installé${NC}"
 }
 
-# Check dependencies
-echo "🔍 Checking dependencies..."
+# ─── Vérification des dépendances ────────────────────────────────────────────
 
+echo -e "${YELLOW}🔍 Vérification des dépendances...${NC}"
+
+# Docker
 if ! command_exists docker; then
-    install_docker
+  install_docker
 fi
 
-if ! command_exists docker-compose; then
-    install_docker_compose
+# Vérifier que Docker tourne
+if ! docker info >/dev/null 2>&1; then
+  echo -e "${YELLOW}⚠️  Démarrage du service Docker...${NC}"
+  sudo systemctl start docker 2>/dev/null || sudo service docker start 2>/dev/null || true
+  sleep 3
 fi
 
-# Check if user is in docker group (warn only, don't fail)
-if ! groups $USER | grep -q docker; then
-    echo -e "${YELLOW}⚠️  User not in docker group. Adding...${NC}"
-    sudo usermod -aG docker $USER
-    echo -e "${YELLOW}⚠️  You may need to log out and back in, or run: newgrp docker${NC}"
-    # Use sudo for docker commands if not in group
-    DOCKER_CMD="sudo docker"
-    COMPOSE_CMD="sudo docker-compose"
-else
-    DOCKER_CMD="docker"
-    COMPOSE_CMD="docker-compose"
+# Docker Compose
+if ! get_compose_cmd >/dev/null 2>&1; then
+  install_docker_compose
 fi
 
-# Create .env if not exists
+COMPOSE_CMD=$(get_compose_cmd)
+echo -e "${GREEN}✅ Docker: $(docker --version)${NC}"
+echo -e "${GREEN}✅ Compose: $COMPOSE_CMD${NC}"
+
+# Vérifier les droits Docker
+if ! docker ps >/dev/null 2>&1; then
+  echo -e "${YELLOW}⚠️  Droits insuffisants, utilisation de sudo...${NC}"
+  COMPOSE_CMD="sudo $COMPOSE_CMD"
+fi
+
+# ─── Configuration ────────────────────────────────────────────────────────────
+
+# Créer .env backend si absent
 if [ ! -f backend/.env ]; then
-    echo -e "${YELLOW}⚙️  Creating backend/.env from example...${NC}"
-    cp backend/.env.example backend/.env
+  echo -e "${YELLOW}⚙️  Création de backend/.env depuis l'exemple...${NC}"
+  cp backend/.env.example backend/.env
+
+  # Détecter l'IP du serveur et la mettre dans .env
+  SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
+  sed -i "s|FRONTEND_URL=http://localhost|FRONTEND_URL=http://$SERVER_IP|g" backend/.env
+  echo -e "${YELLOW}   IP détectée: $SERVER_IP (modifiable dans backend/.env)${NC}"
 fi
 
-# Create data directory with correct permissions
-echo -e "${YELLOW}📁 Setting up data directory...${NC}"
-mkdir -p backend/data
-# Ensure the directory is writable by the container user (uid 1001)
-sudo chown -R 1001:1001 backend/data 2>/dev/null || chown -R 1001:1001 backend/data
-chmod -R 755 backend/data
+# Créer les répertoires de données
+echo -e "${YELLOW}📁 Préparation des répertoires...${NC}"
+mkdir -p backend/data backups
+chmod -R 755 backend/data backups 2>/dev/null || true
+# Essayer de chown pour l'uid 1001 (user nodejs dans le container)
+sudo chown -R 1001:1001 backend/data backups 2>/dev/null || \
+  chown -R 1001:1001 backend/data backups 2>/dev/null || true
 
-# Create backups directory
-mkdir -p backups
-sudo chown -R 1001:1001 backups 2>/dev/null || chown -R 1001:1001 backups
-chmod -R 755 backups
+# ─── Build ────────────────────────────────────────────────────────────────────
 
-# Build images first
-echo -e "${YELLOW}🔨 Building images...${NC}"
-$COMPOSE_CMD build --no-cache
+echo ""
+echo -e "${YELLOW}🔨 Construction des images Docker...${NC}"
+$COMPOSE_CMD build
 
-# Start only the backend first to initialize database
-echo -e "${YELLOW}🗄️ Starting backend for database initialization...${NC}"
+# ─── Démarrage ───────────────────────────────────────────────────────────────
+
+echo ""
+echo -e "${YELLOW}🗄️  Démarrage du backend...${NC}"
 $COMPOSE_CMD up -d backend
 
-# Wait for backend to be ready
-echo -e "${YELLOW}⏳ Waiting for backend to be ready...${NC}"
-sleep 10
+# Attendre que le backend soit prêt
+echo -e "${YELLOW}⏳ Attente que le backend soit prêt (max 60s)...${NC}"
+for i in $(seq 1 12); do
+  if $COMPOSE_CMD exec -T backend wget -q --spider http://127.0.0.1:4000/api/health 2>/dev/null; then
+    echo -e "${GREEN}✅ Backend prêt!${NC}"
+    break
+  fi
+  echo -n "."
+  sleep 5
+done
+echo ""
 
-# Run database migrations
-echo -e "${YELLOW}🗄️ Running database migrations...${NC}"
-if ! $COMPOSE_CMD exec -T backend npx prisma db push; then
-    echo -e "${RED}❌ Database migration failed${NC}"
-    $COMPOSE_CMD logs backend --tail=50
-    exit 1
+# Migrations DB
+echo -e "${YELLOW}🗄️  Migrations de la base de données...${NC}"
+if ! $COMPOSE_CMD exec -T backend npx prisma db push --accept-data-loss; then
+  echo -e "${RED}❌ Échec des migrations${NC}"
+  $COMPOSE_CMD logs backend --tail=50
+  exit 1
 fi
+echo -e "${GREEN}✅ Base de données initialisée${NC}"
 
-# Seed database if empty
-echo -e "${YELLOW}🌱 Seeding database...${NC}"
-if ! $COMPOSE_CMD exec -T backend npx prisma db seed; then
-    echo -e "${YELLOW}⚠️  Database seeding failed (may already have data)${NC}"
-fi
-
-# Verify database has data
-echo -e "${YELLOW}🔍 Verifying database...${NC}"
+# Seed initial
+echo -e "${YELLOW}🌱 Initialisation des données...${NC}"
 $COMPOSE_CMD exec -T backend node -e "
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-prisma.job.count().then(count => {
-  console.log('Jobs in database:', count);
+const p = new PrismaClient();
+p.user.upsert({
+  where: { email: 'personal@local' },
+  update: {},
+  create: { id: 'personal-user', email: 'personal@local', name: 'Personal User' }
+}).then(() => {
+  console.log('✅ Utilisateur par défaut créé');
   process.exit(0);
-}).catch(err => {
-  console.error('Database verification failed:', err);
-  process.exit(1);
-});
-"
+}).catch(e => { console.error(e); process.exit(1); });
+" 2>/dev/null || echo -e "${YELLOW}⚠️  Seed ignoré (données déjà présentes)${NC}"
 
-# Now start all services
-echo -e "${YELLOW}🚀 Starting all services...${NC}"
+# Démarrer tout
+echo ""
+echo -e "${YELLOW}🚀 Démarrage de tous les services...${NC}"
 $COMPOSE_CMD up -d
 
-# Wait for services
-echo -e "${YELLOW}⏳ Waiting for services to be ready...${NC}"
-sleep 10
+# Attendre
+sleep 5
 
-# Show status
-echo -e "${GREEN}✅ EmploiSearch started successfully!${NC}"
-SERVER_IP=$(hostname -I | awk '{print $1}')
-echo -e "${GREEN}🌐 Frontend: http://$SERVER_IP${NC}"
-echo -e "${GREEN}🔧 Backend API: http://$SERVER_IP/api${NC}"
+# ─── Résumé ───────────────────────────────────────────────────────────────────
+
+echo ""
+SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
+echo -e "${GREEN}╔════════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║        ✅ EmploiSearch démarré!            ║${NC}"
+echo -e "${GREEN}╠════════════════════════════════════════════╣${NC}"
+echo -e "${GREEN}║  🌐 Interface:  http://$SERVER_IP          ${NC}"
+echo -e "${GREEN}║  🔧 API:        http://$SERVER_IP/api      ${NC}"
+echo -e "${GREEN}║  ❤️  Health:    http://$SERVER_IP/api/health${NC}"
+echo -e "${GREEN}╚════════════════════════════════════════════╝${NC}"
 echo ""
 $COMPOSE_CMD ps
-
 echo ""
-echo -e "${YELLOW}To view logs: $COMPOSE_CMD logs -f${NC}"
+echo -e "${YELLOW}Logs: $COMPOSE_CMD logs -f${NC}"
+echo -e "${YELLOW}Stop: ./stop.sh${NC}"

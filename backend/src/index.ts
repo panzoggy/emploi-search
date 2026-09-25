@@ -22,8 +22,25 @@ const PORT = Number(process.env.PORT) || 4000
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }))
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost',
+  'http://localhost',
+  'http://localhost:3000',
+  'http://localhost:80',
+  'http://127.0.0.1',
+]
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true)
+    if (allowedOrigins.includes(origin)) return callback(null, true)
+    // Also allow any local network IP (192.168.x.x, 10.x.x.x)
+    if (/^http:\/\/(192\.168|10\.|172\.(1[6-9]|2\d|3[01]))\.\d+\.\d+(:\d+)?$/.test(origin)) {
+      return callback(null, true)
+    }
+    callback(new Error(`CORS: origin ${origin} not allowed`))
+  },
   credentials: true,
 }))
 app.use(morgan('dev'))

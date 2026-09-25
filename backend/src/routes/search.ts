@@ -52,6 +52,7 @@ router.post('/', asyncHandler(async (req, res) => {
           ...job,
           searchId: search.id,
         })),
+        skipDuplicates: true,
       })
       totalJobs += saved.count
       console.log(`[SEARCH] Saved ${saved.count} jobs from ${result.source}`)

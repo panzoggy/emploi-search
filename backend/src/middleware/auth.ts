@@ -6,24 +6,27 @@ const DEFAULT_USER_EMAIL = 'personal@local'
 const DEFAULT_USER_NAME = 'Personal User'
 
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
-  const userId = (req.headers['x-user-id'] as string) || DEFAULT_USER_ID
-  
-  let user = await prisma.user.findUnique({ where: { id: userId } })
-  
-  if (!user) {
-    user = await prisma.user.upsert({
-      where: { email: DEFAULT_USER_EMAIL },
-      update: { id: userId },
-      create: {
-        id: userId,
-        email: DEFAULT_USER_EMAIL,
-        name: DEFAULT_USER_NAME,
-      },
-    })
+  try {
+    // Ensure default user always exists
+    let user = await prisma.user.findUnique({ where: { id: DEFAULT_USER_ID } })
+
+    if (!user) {
+      user = await prisma.user.upsert({
+        where: { email: DEFAULT_USER_EMAIL },
+        update: {},
+        create: {
+          id: DEFAULT_USER_ID,
+          email: DEFAULT_USER_EMAIL,
+          name: DEFAULT_USER_NAME,
+        },
+      })
+    }
+
+    req.user = user
+    next()
+  } catch (error) {
+    next(error)
   }
-  
-  req.user = user
-  next()
 }
 
 declare global {

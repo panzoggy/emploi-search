@@ -1,22 +1,11 @@
-# Backend Dockerfile
 FROM node:20-alpine AS base
 
-# Install dependencies for Puppeteer
+# Install only what we need for SQLite and HTTPS
 RUN apk add --no-cache \
-    chromium \
-    nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
     sqlite \
     openssl \
+    ca-certificates \
     && rm -rf /var/cache/apk/*
-
-# Tell Puppeteer to use installed Chromium
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
@@ -24,8 +13,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm ci --only=production
+# Install ALL dependencies (dev too, needed for tsx/tsc build)
+RUN npm ci
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -36,12 +25,15 @@ COPY . .
 # Build TypeScript
 RUN npm run build
 
+# Prune dev dependencies for production
+RUN npm prune --production
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Change ownership
-RUN chown -R nodejs:nodejs /app
+# Create data directory with correct permissions
+RUN mkdir -p /app/data && chown -R nodejs:nodejs /app
 
 USER nodejs
 
