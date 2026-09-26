@@ -1,33 +1,65 @@
-# État du projet
+# STATE — EmploiSearch
+*Dernière mise à jour : 26/09/2026*
 
-Mis à jour le 26/09/2026.
+## Résumé de l'état actuel
 
-## Où on en est
+L'application tourne sur la tour (`./start.sh`) et en ligne via un tunnel TryCloudflare. `start.sh` affiche à chaque lancement l'adresse locale, l'adresse Internet (qui change à chaque démarrage) et le code d'inscription. Collecte sur HelloWork, Indeed et LinkedIn, score de profil expliqué, flux trié au clavier avec filtres, comptes utilisateur isolés, CV chiffré avec aperçu. Tests backend (41), TypeScript et linter de standards au vert des deux côtés.
 
-L'application démarre avec `./start.sh` et fonctionne de bout en bout : collecte sur les trois sites, profil avec import de CV, score expliqué, flux trié au clavier, historique des recherches. Tests backend (41) et vérification TypeScript au vert, linter de standards sans violation côté backend comme frontend.
+Tout est sur la branche `dev` de `panzoggy/emploi-search` (commit `d00379c`), pas encore fusionné dans `main`.
 
-Testé en réel : une recherche « développeur react / Lyon » ramène environ 55 offres nouvelles (HelloWork 16, Indeed 15, LinkedIn 25), toutes avec leur description complète. Relancée, elle ne ramène que des offres inédites.
+## Ce qui a été fait — session du 26/09/2026
 
-## Ce qui a changé par rapport à la version reçue
+- Réparation du démarrage (lockfiles, compilation, base jamais créée), passage à pnpm et Node 22.
+- Collecte réécrite : JSON-LD des pages d'offres, Indeed via Chrome sur Xvfb, pagination jusqu'à 25 offres inédites par site, doublons entre sites.
+- Matching : embeddings multilingual-e5-small locaux (comparés à 5 autres modèles), critères pondérés expliqués, apprentissage favoris/rejets, analyse de CV.
+- Interface refaite deux fois : d'abord « clean-minimal », jugée « AI slop » par Chris, puis style « registre » (grille, filets, zéro arrondi, accent vermillon). Filtres dans l'URL.
+- Comptes (identifiant, mot de passe, sans e-mail), isolation des données par compte, CV chiffré (AES-256-GCM), aperçu du CV (pdf.js), audit de sécurité (5 failles corrigées).
+- `setup.sh` pour machine vierge (testé Debian, Ubuntu, Arch, Fedora), mise en ligne systématique par TryCloudflare.
+- Documentation réécrite (README, ARCHITECTURE, docs/matching.md).
 
-La version reçue ne démarrait pas : lockfiles supprimés alors que les Dockerfiles faisaient `npm ci`, back et front qui ne compilaient pas, base jamais créée (le CLI Prisma était retiré de l'image). Une fois démarrée, elle butait sur une limite de 100 requêtes par quart d'heure, des filtres incompatibles avec SQLite et des préférences mal enregistrées. HelloWork ne ramenait rien (sélecteurs inventés) et Indeed était bloqué par Cloudflare.
+## Décisions prises
 
-Refonte faite depuis :
+| Décision | Raison | Date |
+|---|---|---|
+| pnpm au lieu de npm, scripts d'installation limités à Prisma et esbuild | Demande de Chris : npm = failles et malwares silencieux | 26/09 |
+| Indeed limité à la page 1, trié par date | Au-delà, Indeed exige un compte : stocker des identifiants et risquer la suspension n'en vaut pas la peine | 26/09 |
+| multilingual-e5-small | Meilleur AUC (0,913) sur des intitulés français que des modèles 3 à 5 fois plus lourds (docs/matching.md) | 26/09 |
+| Offre « vue » après 1,5 s d'affichage ou dès qu'elle est classée | Choix de Chris : ne rien perdre de ce qui est seulement survolé | 26/09 |
+| Style « registre » (suisse) pour l'interface | Choisi par Chris parmi 3 directions après rejet de la première version | 26/09 |
+| Pas de déconnexion automatique : sessions de 400 jours prolongées à l'usage | Demande explicite de Chris | 26/09 |
+| Pas d'e-mail ; mot de passe réinitialisé par l'hébergeur (`set-password.js`) | Demande « sans vérif mail » | 26/09 |
+| Chiffrement au repos limité au CV, clé serveur | Une clé liée au mot de passe empêcherait de calculer les scores hors connexion | 26/09 |
+| Offres communes, scores/statuts/recherches par compte | Pas de double téléchargement ; chacun ne voit que ce que ses recherches ont trouvé | 26/09 |
+| En ligne par défaut via TryCloudflare, code d'inscription obligatoire | Demande de Chris ; sans compte Cloudflare l'adresse change à chaque démarrage | 26/09 |
 
-- pnpm à la place de npm, avec la liste explicite des paquets autorisés à exécuter un script d'installation (Prisma, esbuild). Node 22.
-- Backend réorganisé par domaine (`collection`, `offers`, `profile`, `matching`, `shared`), migrations Prisma au lieu de `db push`, logs pino.
-- Collecte : lecture du JSON-LD des pages d'offres, pagination jusqu'à 25 offres inédites par site, détection des doublons entre sites, Indeed via Chrome sur écran virtuel.
-- Score : embeddings locaux et critères pondérés, expliqués à l'écran, avec apprentissage des favoris et des rejets.
-- Interface refaite en style « registre » (grille, filets, zéro arrondi, un accent vermillon) : thème sombre par défaut et thème clair, flux en deux colonnes, raccourcis clavier, annulation, affichage mobile.
-- Filtres du flux (texte, source, contrat, télétravail, score minimum, date) gardés dans l'URL.
+## Contexte non-évident
 
-- Comptes (identifiant et mot de passe, sans e-mail), sessions de 400 jours prolongées à l'usage, isolation complète des données par compte, CV chiffré au repos, aperçu du CV (rendu pdf.js).
-- En ligne par défaut via TryCloudflare : `start.sh` affiche toujours l'adresse locale, l'adresse publique et le code d'inscription. `setup.sh` prépare une machine vierge (Docker compris) et `start.sh` le lance tout seul si besoin.
+- L'image backend est `mcr.microsoft.com/playwright:v1.63.0-noble` : sa version doit rester identique à `playwright-core` du package.json, sinon Indeed casse.
+- Chrome headless est bloqué par Indeed ; seul Chrome « avec écran » sur Xvfb passe. `xvfb-run` se fige en PID 1 dans Docker : Xvfb est lancé à la main dans le CMD.
+- HelloWork déclare `jobLocationType: TELECOMMUTE` dès un jour de télétravail : ce n'est pas un télétravail complet.
+- Calibration des similarités e5 mesurée sur de vraies offres (titre 0,835–0,895, texte 0,83–0,885) : à revérifier si les profils utilisateurs sont très différents d'un profil tech.
+- La migration `accounts_and_cv_file` a été complétée à la main : l'ancien utilisateur unique devient `personal-user`, sans mot de passe, données conservées.
+- `DATA_KEY` (backend/.env) : la perdre rend les CV illisibles. À sauvegarder avec la base.
+- nginx doit servir les `.mjs` en JavaScript (worker pdf.js) et transmettre `X-Forwarded-Proto` du tunnel (cookie `Secure`).
+- `trycloudflare.com` est dans la Public Suffix List : chaque tunnel est un site distinct pour les cookies.
+- Tailwind : ne jamais nommer une couleur `base` (collision avec la taille `text-base`).
 
-## Décisions
+## Prochaines étapes
 
-- Indeed : pas de connexion à un compte pour dépasser la première page, pour ne pas stocker d'identifiants et ne pas risquer la suspension du compte. Tri par date à la place.
-- Modèle d'embeddings choisi sur mesure (voir `docs/matching.md`).
-- Une offre compte comme vue après 1,5 s d'affichage ou dès qu'elle est classée.
-- Pas de déconnexion automatique (demande explicite). Pas d'e-mail : mot de passe réinitialisé par l'hébergeur (`set-password.js`).
-- Chiffrement au repos limité au CV, avec une clé serveur : un chiffrement lié au mot de passe empêcherait le calcul des scores quand l'utilisateur n'est pas connecté.
+1. Récupérer le compte d'avant les comptes : `docker exec -it emploi-backend node dist/auth/set-password.js personal-user <nom>`.
+2. Ouvrir la pull request `dev` → `main` et prévenir l'ami de Chris (passage à pnpm, refonte complète).
+3. Pénalité d'ancienneté dans le score (des offres Indeed de 6-7 mois remontent) : proposée, en attente de Chris.
+4. Lieu par distance réelle (géocodage) au lieu de ville/département.
+
+## Points en suspens
+
+- Pénalité d'ancienneté : Chris n'a pas encore répondu.
+- Adresse Internet changeante (TryCloudflare) vs tunnel nommé (compte gratuit et domaine) : à décider.
+- Disque `/mnt/projects` de la tour à 100 % (3 Go libres) : hors de l'app, mais tout peut casser.
+- buildx absent sur la tour (`sudo pacman -S docker-buildx`) : builds plus lents.
+
+## Historique
+
+### Version reçue (avant le 26/09/2026)
+
+La version reçue ne démarrait pas : lockfiles supprimés alors que les Dockerfiles faisaient `npm ci`, back et front qui ne compilaient pas, base jamais créée (le CLI Prisma était retiré de l'image). Une fois démarrée, elle butait sur une limite de 100 requêtes par quart d'heure, des filtres incompatibles avec SQLite et des préférences mal enregistrées. HelloWork ne ramenait rien (sélecteurs inventés) et Indeed était bloqué par Cloudflare. Pas de comptes, pas de matching, une interface générique.
