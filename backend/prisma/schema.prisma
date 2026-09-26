@@ -1,6 +1,6 @@
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  binaryTargets = ["native"]
 }
 
 datasource db {
@@ -8,108 +8,128 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// SQLite n'a pas de type tableau : les listes sont stockées en JSON dans des String.
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  searches     Search[]
-  jobViews     JobView[]
-  jobRejections JobRejection[]
-  preferences  UserPreferences?
+  id           String   @id @default(cuid())
+  username     String   @unique // en minuscules
+  passwordHash String? // scrypt ; null = compte sans mot de passe (ancien utilisateur unique), connexion impossible
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile  Profile?
+  sessions Session[]
+  searches Search[]
+  statuses OfferStatus[]
+  matches  OfferMatch[]
 }
 
-model UserPreferences {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  keywords        String   @default("[]")
-  locations       String   @default("[]")
-  contractTypes   String   @default("[]")
-  remoteOnly      Boolean  @default(false)
-  salaryMin       Int?
-  salaryMax       Int?
-  experienceLevel String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+model Profile {
+  userId            String    @id
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetTitles      String    @default("[]")
+  skills            String    @default("[]")
+  locations         String    @default("[]")
+  contractTypes     String    @default("[]")
+  remote            String    @default("any") // any | hybrid | full
+  salaryMin         Int?
+  seniority         String? // junior | mid | senior | lead
+  excludedKeywords  String    @default("[]")
+  excludedCompanies String    @default("[]")
+  cvFileName        String?
+  cvFile            Bytes? // le PDF d'origine, pour l'aperçu
+  cvText            String?
+  cvUpdatedAt       DateTime?
+  updatedAt         DateTime  @updatedAt
+}
+
+// Session de connexion : le cookie contient un jeton aléatoire, la base n'en garde que l'empreinte SHA-256
+model Session {
+  id         String   @id // empreinte du jeton
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  @@index([userId])
 }
 
 model Search {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  query       String
-  location    String
-  filters     String   @default("{}")
-  results     Job[]    @relation("SearchResults")
-  createdAt   DateTime @default(now())
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query      String
+  location   String
+  status     String    @default("queued") // queued | running | done | error
+  progress   String    @default("{}") // état par source, JSON
+  foundCount Int       @default(0)
+  newCount   Int       @default(0)
+  error      String?
+  createdAt  DateTime  @default(now())
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  offers Offer[] @relation("DiscoveredBy")
+
+  @@index([userId, createdAt])
+  @@index([status])
 }
 
-model Job {
-  id              String   @id @default(cuid())
-  externalId      String
-  source          String
-  title           String
-  company         String
-  location        String
-  description     String
-  url             String   @unique
-  salaryMin       Int?
-  salaryMax       Int?
-  contractType    String?
-  experienceLevel String?
-  remoteType      String?
-  postedAt        DateTime?
-  scrapedAt       DateTime @default(now())
-  searchId        String?
-  search          Search?  @relation("SearchResults", fields: [searchId], references: [id], onDelete: SetNull)
-  views           JobView[]
-  rejections      JobRejection[]
-  
-  @@unique([externalId, source])
-  @@index([source])
+model Offer {
+  id             String    @id @default(cuid())
+  source         String // INDEED | HELLOWORK | LINKEDIN
+  externalId     String
+  fingerprint    String // intitulé + entreprise normalisés, pour repérer la même offre sur deux sites
+  title          String
+  company        String
+  location       String
+  description    String    @default("")
+  url            String
+  contractType   String?
+  remoteType     String? // hybrid | full
+  seniority      String? // intern | apprentice | junior | mid | senior | lead
+  salaryMin      Int?
+  salaryMax      Int?
+  postedAt       DateTime?
+  scrapedAt      DateTime  @default(now())
+  detailsFetched Boolean   @default(false)
+  titleVector    Bytes?
+  textVector     Bytes?
+  searchId       String? // recherche qui a découvert l'offre
+  search         Search?   @relation("DiscoveredBy", fields: [searchId], references: [id], onDelete: SetNull)
+
+  statuses OfferStatus[]
+  matches  OfferMatch[]
+
+  @@unique([source, externalId])
+  @@index([fingerprint])
   @@index([postedAt])
-  @@index([company])
 }
 
-model JobView {
-  id        String   @id @default(cuid())
+// Absence de ligne = offre nouvelle, jamais ouverte ni classée
+model OfferStatus {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobId     String
-  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  viewedAt  DateTime @default(now())
-  duration  Int?     // in seconds
-  
-  @@unique([userId, jobId])
-  @@index([userId])
-  @@index([jobId])
+  offerId   String
+  offer     Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  status    String // SEEN | FAVORITE | INTERESTED | REJECTED
+  reason    String?
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, offerId])
+  @@index([userId, status])
 }
 
-model JobRejection {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobId       String
-  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  rejectedAt  DateTime @default(now())
-  reason      String?
-  
-  @@unique([userId, jobId])
-  @@index([userId])
-  @@index([jobId])
-}
+model OfferMatch {
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  offerId    String
+  offer      Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  score      Int // 0 à 100
+  reasons    String // JSON : [{ label, verdict: "ok" | "partial" | "ko" | "unknown", detail? }]
+  excluded   Boolean  @default(false)
+  computedAt DateTime @updatedAt
 
-model ScrapingLog {
-  id        String   @id @default(cuid())
-  source    String
-  query     String
-  location  String
-  status    String
-  jobsFound Int      @default(0)
-  error     String?
-  startedAt DateTime @default(now())
-  finishedAt DateTime?
+  @@id([userId, offerId])
+  @@index([userId, score])
 }

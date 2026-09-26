@@ -1,20 +1,17 @@
-#!/bin/bash
-# stop.sh - Stop EmploiSearch
+#!/usr/bin/env bash
+# Arrête EmploiSearch et le tunnel. Les données (base SQLite) sont conservées dans le volume Docker.
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")"
+source scripts/lib.sh
 
-set -e
-
-PROJECT_DIR="/opt/emploi"
-cd "$PROJECT_DIR"
-
-echo "🛑 Stopping EmploiSearch..."
-
-# Detect docker command
-if groups $USER | grep -q docker; then
-    COMPOSE_CMD="docker-compose"
-else
-    COMPOSE_CMD="sudo docker-compose"
+if [ -f "$PID_FILE" ]; then
+  kill "$(cat "$PID_FILE")" 2>/dev/null || true
+  rm -f "$PID_FILE"
 fi
 
-$COMPOSE_CMD down
-
-echo -e "\033[0;32m✅ EmploiSearch stopped\033[0m"
+if ! pick_docker; then
+  say "Docker ne répond pas : rien à arrêter."
+  exit 0
+fi
+compose --profile public down
+say "EmploiSearch arrêté."

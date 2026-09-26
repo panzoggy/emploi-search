@@ -1,11 +1,19 @@
-<!DOCTYPE html>
-<html lang="fr">
+<!doctype html>
+<html lang="fr" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EmploiSearch - Recherche d'emploi</title>
-    <meta name="description" content="Recherche d'emploi sur Indeed, HelloWork et LinkedIn avec filtrage intelligent" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Emploi · offres triées pour toi</title>
+    <meta name="description" content="Agrège Indeed, HelloWork et LinkedIn et classe les offres selon ton profil" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23121110'/><rect x='8' y='8' width='16' height='16' fill='%23f2542d'/></svg>" />
+    <!-- Thème appliqué avant le rendu pour éviter un flash de la mauvaise couleur -->
+    <script>
+      try {
+        const saved = localStorage.getItem('theme')
+        if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved
+      } catch {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

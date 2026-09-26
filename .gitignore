@@ -56,10 +56,12 @@ coverage/
 # Backup
 backups/
 *.sql
+# …sauf les migrations Prisma, qui font partie du code
+!backend/prisma/migrations/**/*.sql
 *.sql.gz
 
-# Prisma
-backend/prisma/migrations/
 
 # TypeScript
 *.tsbuildinfo
+# Modèle d'embeddings téléchargé en local
+backend/.models/

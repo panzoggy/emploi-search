@@ -13,8 +13,7 @@ services:
       - DATABASE_URL=file:/app/data/dev.db
     volumes:
       - backend_data:/app/data
-    ports:
-      - "4000:4000"
+    # Pas de port publié : l'API n'est joignable qu'à travers nginx (conteneur frontend)
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:4000/api/health"]
       interval: 30s
@@ -31,10 +30,23 @@ services:
     container_name: emploi-frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "${FRONTEND_PORT:-80}:80"
     depends_on:
       backend:
         condition: service_healthy
+    networks:
+      - emploi-network
+
+  # Accès public optionnel, sans compte Cloudflare (TryCloudflare). Lancé seulement par ./start.sh --public.
+  # Adresse aléatoire en https://….trycloudflare.com, nouvelle à chaque démarrage.
+  tunnel:
+    image: cloudflare/cloudflared:2026.9.3
+    container_name: emploi-tunnel
+    profiles: ["public"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://frontend:80
+    depends_on:
+      - frontend
     networks:
       - emploi-network
 

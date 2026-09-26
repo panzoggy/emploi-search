@@ -1,88 +1,37 @@
 import 'dotenv/config'
-import express from 'express'
-import cors from 'cors'
-import helmet from 'helmet'
-import morgan from 'morgan'
-import rateLimit from 'express-rate-limit'
-import { PrismaClient } from '@prisma/client'
-import { errorHandler } from './middleware/errorHandler.js'
-import { authMiddleware } from './middleware/auth.js'
-import jobRoutes from './routes/jobs.js'
-import searchRoutes from './routes/search.js'
-import userRoutes from './routes/user.js'
-import scrapingRoutes from './routes/scraping.js'
+import { createApp } from './app.js'
+import { prisma } from './shared/db.js'
+import { errorMessage, logger } from './shared/logger.js'
+import { recoverInterruptedSearches } from './collection/search-runner.js'
+import { warmUpEmbeddings } from './matching/index.js'
+import { purgeExpiredSessions } from './auth/index.js'
+import { sealLegacyCvs } from './profile/index.js'
+import { assertDataKey } from './shared/sealed-data.js'
 
-export const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-})
+// Sans clé de chiffrement, on refuse de démarrer plutôt que de stocker des CV en clair
+assertDataKey()
 
-const app = express()
 const PORT = Number(process.env.PORT) || 4000
+const DAY_MS = 86_400_000
 
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' },
-}))
-const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost',
-  'http://localhost',
-  'http://localhost:3000',
-  'http://localhost:80',
-  'http://127.0.0.1',
-]
+const purgeSessions = () =>
+  purgeExpiredSessions()
+    .then(count => count > 0 && logger.info(`${count} sessions expirées supprimées`))
+    .catch(err => logger.warn(`Purge des sessions impossible : ${errorMessage(err)}`))
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true)
-    if (allowedOrigins.includes(origin)) return callback(null, true)
-    // Also allow any local network IP (192.168.x.x, 10.x.x.x)
-    if (/^http:\/\/(192\.168|10\.|172\.(1[6-9]|2\d|3[01]))\.\d+\.\d+(:\d+)?$/.test(origin)) {
-      return callback(null, true)
-    }
-    callback(new Error(`CORS: origin ${origin} not allowed`))
-  },
-  credentials: true,
-}))
-app.use(morgan('dev'))
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
-
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { error: 'Too many requests, please try again later' },
-})
-app.use('/api/', limiter)
-
-app.get('/api/health', async (req, res) => {
-  try {
-    await prisma.$queryRaw`SELECT 1`
-    res.json({ 
-      status: 'ok', 
-      timestamp: new Date().toISOString(),
-      database: 'connected'
-    })
-  } catch (error) {
-    res.status(503).json({ 
-      status: 'error', 
-      timestamp: new Date().toISOString(),
-      database: 'disconnected',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
-  }
+const server = createApp().listen(PORT, '0.0.0.0', () => {
+  logger.info(`API prête sur http://0.0.0.0:${PORT}`)
+  warmUpEmbeddings()
+  void purgeSessions()
+  sealLegacyCvs()
+    .then(count => count > 0 && logger.info(`${count} CV chiffrés`))
+    .catch(err => logger.error(`Chiffrement des anciens CV impossible : ${errorMessage(err)}`))
+  setInterval(() => void purgeSessions(), DAY_MS).unref()
+  recoverInterruptedSearches().catch(err => logger.error(`Reprise des recherches impossible : ${errorMessage(err)}`))
 })
 
-app.use('/api/jobs', authMiddleware, jobRoutes)
-app.use('/api/search', authMiddleware, searchRoutes)
-app.use('/api/user', authMiddleware, userRoutes)
-app.use('/api/scraping', authMiddleware, scrapingRoutes)
-
-app.use(errorHandler)
-
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://0.0.0.0:${PORT}`)
-})
-
-process.on('beforeExit', async () => {
-  await prisma.$disconnect()
-})
+const shutdown = () => {
+  server.close(() => void prisma.$disconnect().finally(() => process.exit(0)))
+}
+process.on('SIGTERM', shutdown)
+process.on('SIGINT', shutdown)

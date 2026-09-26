@@ -2,72 +2,80 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --primary: 199 89% 48%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 199 89% 48%;
-    --radius: 0.5rem;
-  }
+/* Jetons de couleur : chaque couleur a un rôle. Valeurs RGB pour autoriser l'opacité Tailwind.
+   Sombre = encre chaude, clair = papier. Un seul accent (vermillon) : "nouveau" et action principale. */
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: 18 17 16;
+  --surface: 27 26 24;
+  --elevated: 36 34 32;
+  --fg: 236 232 225;
+  --fg-2: 163 158 149;
+  --fg-3: 112 107 99;
+  --rule-subtle: rgba(236, 232, 225, 0.07);
+  --rule: rgba(236, 232, 225, 0.12);
+  --rule-strong: rgba(236, 232, 225, 0.24);
+  --accent: 242 84 45;
+  --accent-fg: 18 17 16;
+  --success: 120 186 136;
+  --danger: 226 108 96;
+  --warning: 214 162 76;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: 244 242 238;
+  --surface: 236 233 227;
+  --elevated: 228 224 217;
+  --fg: 20 19 17;
+  --fg-2: 94 90 83;
+  --fg-3: 146 141 132;
+  --rule-subtle: rgba(20, 19, 17, 0.07);
+  --rule: rgba(20, 19, 17, 0.13);
+  --rule-strong: rgba(20, 19, 17, 0.26);
+  --accent: 214 57 27;
+  --accent-fg: 250 248 244;
+  --success: 46 122 70;
+  --danger: 184 52 40;
+  --warning: 156 102 20;
 }
 
 @layer base {
-  * {
-    @apply border-border;
+  html {
+    @apply bg-canvas text-fg antialiased;
   }
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    @apply min-h-screen bg-canvas text-sm leading-normal;
+  }
+  :focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-accent;
+  }
+  ::selection {
+    @apply bg-accent text-accent-fg;
   }
 }
 
 @layer components {
-  .btn {
-    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
-  }
-  .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700;
-  }
-  .btn-secondary {
-    @apply btn bg-secondary text-secondary-foreground hover:bg-secondary/80;
-  }
-  .btn-outline {
-    @apply btn border border-input bg-background hover:bg-accent hover:text-accent-foreground;
-  }
-  .btn-ghost {
-    @apply btn hover:bg-accent hover:text-accent-foreground;
-  }
-  .btn-destructive {
-    @apply btn bg-destructive text-destructive-foreground hover:bg-destructive/90;
-  }
-  .input {
-    @apply flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
-  }
-  .card {
-    @apply rounded-xl border bg-white text-gray-950 shadow-sm;
-  }
-  .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  /* Petites étiquettes en capitales espacées : titres de colonnes, rubriques */
+  .label {
+    @apply font-sans text-[11px] font-medium uppercase tracking-label text-fg-3;
   }
 }
 
 @layer utilities {
-  .scrollbar-hide {
-    -ms-overflow-style: none;
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Barres qui défilent à l'horizontale sur petit écran : on défile au doigt ou au trackpad, sans ascenseur */
+  .scrollbar-none {
     scrollbar-width: none;
   }
-  .scrollbar-hide::-webkit-scrollbar {
+  .scrollbar-none::-webkit-scrollbar {
     display: none;
+  }
+  .scrollbar-quiet {
+    scrollbar-width: thin;
+    scrollbar-color: var(--rule-strong) transparent;
   }
 }
