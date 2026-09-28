@@ -65,3 +65,6 @@ backups/
 *.tsbuildinfo
 # Modèle d'embeddings téléchargé en local
 backend/.models/
+
+# Fichier daccès généré à chaque démarrage (vraies adresses + code)
+/ACCES.txt

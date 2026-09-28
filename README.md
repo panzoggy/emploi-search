@@ -29,13 +29,46 @@ L'adresse locale sert à la maison, l'adresse Internet partout ailleurs. Le code
 ```bash
 ./start.sh            # réseau local et Internet
 ./start.sh --local    # réseau local seulement, sans tunnel
+./update.sh           # met à jour le code (dev), installe les manques, reconstruit et relance
 ./stop.sh             # arrête tout (les données sont conservées)
-./restart.sh          # arrête puis relance en reconstruisant, par exemple après un git pull
+./restart.sh          # arrête puis relance en reconstruisant
 ```
 
 L'adresse Internet change à chaque redémarrage de l'app ou de la machine. Relancer `./start.sh` quand tout tourne déjà ne coupe rien et réaffiche les adresses actuelles.
 
 Le premier lancement prend quelques minutes : il y a environ 3 Go à télécharger, Chrome (pour Indeed) et le modèle de classement. Si le port 80 est déjà pris : `FRONTEND_PORT=8080 ./start.sh`. Les logs de la session en cours sont dans `logs/app.log` ; ils repartent de zéro à chaque démarrage.
+
+## Mettre à jour
+
+Une seule commande, depuis la racine du repo :
+
+```bash
+./update.sh
+```
+
+Elle récupère la dernière version de la branche `dev` (`git reset --hard origin/dev`), installe ce qui manque, reconstruit les images touchées par les changements de code ou de dépendances, redémarre les conteneurs et régénère `ACCES.txt`.
+
+Comme elle aligne le dépôt sur `origin/dev`, **toute modification locale non poussée est écrasée** : `update.sh` est fait pour une machine de déploiement, pas pour développer dessus.
+
+## Démarrage automatique et fichier d'accès
+
+Pour qu'EmploiSearch redémarre tout seul après un redémarrage de la machine, on installe un service systemd (une seule fois) :
+
+```bash
+sudo ./scripts/install-autostart.sh
+```
+
+Le service monte les conteneurs au boot, puis écrit un fichier `ACCES.txt` à la racine du repo. On y retrouve, à jour à chaque démarrage, les trois informations utiles pour se connecter :
+
+```
+Connexion réseau local : http://192.168.1.42
+Connexion Internet      : https://mots-au-hasard.trycloudflare.com
+Code d'inscription       : k3x9-exemple
+```
+
+L'adresse Internet (trycloudflare) changeant à chaque redémarrage, ce fichier est régénéré systématiquement — au boot de la machine et à chaque `./update.sh` — pour ne jamais perdre l'adresse en cours. Pour le rafraîchir à la main quand l'app tourne déjà : `./scripts/access.sh`.
+
+`ACCES.txt` contient de vraies adresses et le code d'inscription : il n'est pas suivi par git.
 
 ## Comptes
 
@@ -67,7 +100,7 @@ Une nouvelle recherche ne ramène que des offres absentes de la base. Elle parco
 
 L'accès depuis Internet passe par un tunnel Cloudflare rapide (TryCloudflare) : gratuit, sans compte, et aucun port à ouvrir sur la box, puisque c'est la machine qui appelle Cloudflare. Ce qu'il faut savoir :
 
-- l'adresse est aléatoire et change à chaque démarrage : il faut la retransmettre ;
+- l'adresse est aléatoire et change à chaque démarrage : il faut la retransmettre (elle est toujours dans `ACCES.txt`) ;
 - Cloudflare le réserve aux tests : pas de garantie de disponibilité, et 200 requêtes simultanées au maximum (large pour quelques personnes) ;
 - sans le code d'inscription, personne ne peut créer de compte. Pour le changer, modifie `SIGNUP_CODE` dans `backend/.env` puis `./restart.sh`.
 
@@ -119,6 +152,8 @@ cd frontend && pnpm typecheck && pnpm format
 ```
 
 Après une modification de `backend/prisma/schema.prisma`, crée une migration avec `pnpm exec prisma migrate dev --name ce-qui-change`. Le conteneur l'applique tout seul au démarrage.
+
+Une machine de déploiement se met à jour en une commande, `./update.sh` (voir plus haut) : elle tire `dev` et reconstruit ce qu'il faut.
 
 ## Stack et ports
 
